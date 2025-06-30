@@ -3,26 +3,13 @@ import streamlit as st
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
-from pypdf import PdfReader
-
-__import__("pysqlite3")
-import sys
-sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-
-import chromadb
-from sentence_transformers import SentenceTransformer
 import random
-from datetime import datetime, date
+from sentence_transformers import SentenceTransformer
 
-reflection_questions = [
-    "Questo ti risuona?",
-    "Hai esempi concreti di quando hai vissuto questo nella tua vita?",
-    "Ti piacerebbe approfondire questo aspetto?",
-    "Come potresti applicare questo consiglio nella pratica quotidiana? (es: scrivi 3 azioni pratiche)",
-    "C’è qualcosa di cui vorresti sapere di più?",
-    "Quali sono le tue riflessioni su quanto detto?"
-]
+# Configurazione pagina Streamlit
+st.set_page_config(page_title="Chatbot Numerologica Personale", page_icon="🔮")
 
+# Caricamento chiavi API
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
@@ -36,65 +23,59 @@ except Exception as e:
     st.error(f"Errore nella configurazione del modello Gemini: {e}")
     st.stop()
 
-system_prompt_base = """La tua identità è Natascha, un'assistente numerologica personale..."""
+# Prompt di base
+system_prompt_base = """La tua identità è Natascha, un'assistente numerologica personale. Usa empatia e chiarezza, rispondi in italiano con un tono gentile e professionale. Offri spunti pratici, chiari e ispiranti. Se l’utente chiede dati personali, usa solo quelli disponibili nella sua mappa. Se non ci sono dati sufficienti, invitalo a generarli nella sezione 'Mappa Numerologica'."""
 
-project_root_dir = os.path.dirname(os.path.abspath(__file__))
-MAPPA_PATH = os.path.join(os.path.dirname(project_root_dir), "mappa_per_chatbot.json")
-
-def carica_dati_mappa_per_chatbot(filepath=MAPPA_PATH):
-    try:
-        with open(filepath, "r", encoding="utf-8-sig") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        st.warning(f"File '{filepath}' non trovato.")
-        return None
-    except json.JSONDecodeError:
-        st.error(f"Errore nella lettura del file '{filepath}'.")
-        return None
-    except Exception as e:
-        st.error(f"Errore inatteso durante il caricamento della mappa: {e}")
-        return None
+# Domande di riflessione
+reflection_questions = [
+    "Questo ti risuona?",
+    "Hai esempi concreti di quando hai vissuto questo nella tua vita?",
+    "Ti piacerebbe approfondire questo aspetto?",
+    "Come potresti applicare questo consiglio nella pratica quotidiana? (es: scrivi 3 azioni pratiche)",
+    "C’è qualcosa di cui vorresti sapere di più?",
+    "Quali sono le tue riflessioni su quanto detto?"
+]
 
 @st.cache_resource
 def get_embedding_model():
     return SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
-def get_relevant_chunks(query, collection, embedding_model, n_results=3):
-    query_embedding = embedding_model.encode(query).tolist()
-    results = collection.query(query_embeddings=[query_embedding], n_results=n_results)
-    if results and results['documents']:
-        flat_documents = [item for sublist in results['documents'] for item in sublist]
-        return "\n".join(flat_documents)
-    return "Nessun contesto aggiuntivo disponibile."
-
 def st_session_message(role, content):
     st.session_state.messages.append({"role": role, "content": content})
 
+# --- AVVIO APP ---
 def main():
-    st.set_page_config(page_title="Chatbot Numerologica Personale", page_icon="🔮")
     st.title("Chatbot Numerologica ✨")
     st.markdown("Chiedimi qualsiasi cosa sulla tua Mappa Numerologica o sui tuoi cicli!")
 
-    if "mappa_numerologica_utente" not in st.session_state:
-        st.session_state.mappa_numerologica_utente = carica_dati_mappa_per_chatbot()
+    # ⚠️ Controllo presenza mappa
+    if "mappa_numerologica_corrente" not in st.session_state or not st.session_state["mappa_numerologica_corrente"]:
+        st.warning("⚠️ Nessuna mappa trovata. Genera prima la tua mappa nella sezione 'Mappa Numerologica'.")
+        st.stop()
+    else:
+        st.session_state.mappa_numerologica_utente = st.session_state["mappa_numerologica_corrente"]
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # Mostra conversazione precedente
     for message in st.session_state.messages:
         with st.chat_message(message["role"], avatar="😊" if message["role"] == "user" else "🥰"):
             st.markdown(message["content"])
 
+    # Nuova domanda dell'utente
     if prompt := st.chat_input("Cosa vuoi sapere sulla tua numerologia?"):
         with st.chat_message("user", avatar="😊"):
             st.markdown(prompt)
         st_session_message("user", prompt)
 
+        # Prepara prompt completo con dati utente
         full_gemini_prompt = system_prompt_base
         mappa = st.session_state.mappa_numerologica_utente
 
         if mappa:
-            # Tutti i dati della mappa aggiunti al prompt (omessi qui per brevità)
+            for k, v in mappa.items():
+                full_gemini_prompt += f"\n{k}: {v}"
             full_gemini_prompt += f"\n\nDomanda dell'Utente: {prompt}"
 
         try:
@@ -104,14 +85,13 @@ def main():
         except Exception as e:
             answer = f"Errore nella generazione della risposta: {e}"
 
-        st_session_message('assistant', answer)
+        st_session_message("assistant", answer)
         with st.chat_message('assistant', avatar="🥰"):
             st.markdown(answer)
-            n = random.choice([1, 2])
-            for q in random.sample(reflection_questions, n):
+            for q in random.sample(reflection_questions, random.choice([1, 2])):
                 st.markdown(f"**{q}**")
 
-    # --- Pulsante di Reset Chat (sempre visibile) ---
+    # --- Pulsante Reset ---
     st.divider()
     if st.button("🔄 Resetta la conversazione"):
         st.session_state.clear()
