@@ -14,7 +14,6 @@ from sentence_transformers import SentenceTransformer
 import random
 from datetime import datetime, date
 
-# --- Domande di riflessione ---
 reflection_questions = [
     "Questo ti risuona?",
     "Hai esempi concreti di quando hai vissuto questo nella tua vita?",
@@ -24,11 +23,10 @@ reflection_questions = [
     "Quali sono le tue riflessioni su quanto detto?"
 ]
 
-# --- Caricamento chiave API ---
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
-    st.error("❌ GOOGLE_API_KEY mancante nel file .env o nei secrets.")
+    st.error("❌ GOOGLE_API_KEY mancante nel file .env o nei secrets di Streamlit Cloud.")
     st.stop()
 
 genai.configure(api_key=api_key)
@@ -38,14 +36,11 @@ except Exception as e:
     st.error(f"Errore nella configurazione del modello Gemini: {e}")
     st.stop()
 
-# --- Prompt di sistema ---
 system_prompt_base = """La tua identità è Natascha, un'assistente numerologica personale..."""
 
-# --- Percorso del file JSON ---
 project_root_dir = os.path.dirname(os.path.abspath(__file__))
 MAPPA_PATH = os.path.join(os.path.dirname(project_root_dir), "mappa_per_chatbot.json")
 
-# --- Caricamento mappa ---
 def carica_dati_mappa_per_chatbot(filepath=MAPPA_PATH):
     try:
         with open(filepath, "r", encoding="utf-8-sig") as f:
@@ -60,12 +55,10 @@ def carica_dati_mappa_per_chatbot(filepath=MAPPA_PATH):
         st.error(f"Errore inatteso durante il caricamento della mappa: {e}")
         return None
 
-# --- Embedding model ---
 @st.cache_resource
 def get_embedding_model():
     return SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
-# --- Ricerca chunks rilevanti ---
 def get_relevant_chunks(query, collection, embedding_model, n_results=3):
     query_embedding = embedding_model.encode(query).tolist()
     results = collection.query(query_embeddings=[query_embedding], n_results=n_results)
@@ -74,18 +67,16 @@ def get_relevant_chunks(query, collection, embedding_model, n_results=3):
         return "\n".join(flat_documents)
     return "Nessun contesto aggiuntivo disponibile."
 
-# --- Utility per messaggi ---
 def st_session_message(role, content):
     st.session_state.messages.append({"role": role, "content": content})
 
-# --- Main App ---
 def main():
     st.set_page_config(page_title="Chatbot Numerologica Personale", page_icon="🔮")
     st.title("Chatbot Numerologica ✨")
     st.markdown("Chiedimi qualsiasi cosa sulla tua Mappa Numerologica o sui tuoi cicli!")
 
-    # Ricarica sempre la mappa
-    st.session_state.mappa_numerologica_utente = carica_dati_mappa_per_chatbot()
+    if "mappa_numerologica_utente" not in st.session_state:
+        st.session_state.mappa_numerologica_utente = carica_dati_mappa_per_chatbot()
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -103,6 +94,20 @@ def main():
         mappa = st.session_state.mappa_numerologica_utente
 
         if mappa:
+            calendario_info = ""
+
+            if "micro_cicli_quadrimestri_calendario" in mappa:
+                calendario_info += "\n\n📅 Micro Cicli Quadrimestrali:\n"
+                for item in mappa["micro_cicli_quadrimestri_calendario"]:
+                    calendario_info += f"{item['Q']}: {item['Inizio']} - {item['Fine']} → {item['Micro cicli annuali']}\n"
+
+            if "micro_pinnacoli_sfide_trimestri_calendario" in mappa:
+                calendario_info += "\n\n🌄️ Micro Pinnacoli e Sfide Trimestrali:\n"
+                for item in mappa["micro_pinnacoli_sfide_trimestri_calendario"]:
+                    calendario_info += f"{item['Trimestre']}: {item['Inizio']} - {item['Fine']}, Pinnacolo: {item['Micro-Pinnacoli']}, Sfida: {item['MicroSfide']}\n"
+
+            full_gemini_prompt += f"\n\n📂 Dati Mappa:\n{json.dumps(mappa, ensure_ascii=False, indent=2)}"
+            full_gemini_prompt += calendario_info
             full_gemini_prompt += f"\n\nDomanda dell'Utente: {prompt}"
 
         try:
@@ -115,7 +120,8 @@ def main():
         st_session_message('assistant', answer)
         with st.chat_message('assistant', avatar="🥰"):
             st.markdown(answer)
-            for q in random.sample(reflection_questions, k=random.choice([1, 2])):
+            n = random.choice([1, 2])
+            for q in random.sample(reflection_questions, n):
                 st.markdown(f"**{q}**")
 
     st.divider()
