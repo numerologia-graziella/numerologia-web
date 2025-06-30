@@ -11,8 +11,8 @@ st.set_page_config(page_title="Calendario Dinamico Numerologico", page_icon="ðŸ“
 st.title("Calendario Dinamico Numerologico")
 
 # --- Path JSON ---
-BASE_DIR = Path(__file__).parent.parent.resolve()
-MAPPA_PATH = BASE_DIR / "mappa_per_chatbot.json"
+MAPPA_PATH = "mappa_per_chatbot.json"
+
 
 def riduci_numero(n):
     while n > 9 and n not in (11, 22, 33):
