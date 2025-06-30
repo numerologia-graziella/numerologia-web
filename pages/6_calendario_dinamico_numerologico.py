@@ -98,16 +98,58 @@ def main():
     st.subheader("Micro Cicli (Quadrimestri)")
     st.table(df_quad)
 
-    # Placeholder micro-pinnacoli e sfide trimestrali (puoi integrare da versione precedente se vuoi)
-    st.markdown("🧪 *Sezione Micro-Pinnacoli e Sfide in sviluppo...*")
+    # Tabella Micro Pinnacoli e Micro Sfide (Trimestri)
+    st.markdown("---")
+    st.subheader("Micro Pinnacoli e Micro Sfide (Trimestri)")
+    rows, mp_vals, sf_vals = [], [], []
+    for i in range(8):
+        sm = 1 + i*3
+        sy = last_year + (sm - 1) // 12
+        sm = ((sm - 1) % 12) + 1
+        em = ((sm + 2 - 1) % 12) + 1
+        ey = sy + (sm + 2 - 1) // 12
+        start = date(sy, sm, 1)
+        end = date(ey, em, calendar.monthrange(ey, em)[1])
 
-    # Esportazione semplice
+        if i == 0:
+            raw_mp, raw_sf = m1['uni_base'] + forza, abs(m1['uni_base'] - forza)
+        elif i == 1:
+            raw_mp, raw_sf = forza + m1['personale'], abs(forza - m1['personale'])
+        elif i == 2:
+            raw_mp, raw_sf = mp_vals[0] + mp_vals[1], abs(sf_vals[0] - sf_vals[1])
+        elif i == 3:
+            raw_mp, raw_sf = m1['uni_base'] + m1['personale'], abs(m1['uni_base'] - m1['personale'])
+        elif i == 4:
+            raw_mp, raw_sf = m2['uni_base'] + forza, abs(m2['uni_base'] - forza)
+        elif i == 5:
+            raw_mp, raw_sf = forza + m2['personale'], abs(forza - m2['personale'])
+        elif i == 6:
+            raw_mp, raw_sf = mp_vals[4] + mp_vals[5], abs(sf_vals[4] - sf_vals[5])
+        else:
+            raw_mp, raw_sf = m2['uni_base'] + m2['personale'], abs(m2['uni_base'] - m2['personale'])
+
+        mp = riduci_numero(raw_mp)
+        sf = riduci_numero(raw_sf)
+        mp_vals.append(mp)
+        sf_vals.append(sf)
+        rows.append({
+            'Trimestre': f"T{i+1}",
+            'Inizio': start.strftime('%d/%m/%Y'),
+            'Fine': end.strftime('%d/%m/%Y'),
+            'Micro-Pinnacoli': f"{raw_mp} → {mp}",
+            'MicroSfide': f"{raw_sf} → {sf}"
+        })
+    df_ms = pd.DataFrame(rows)
+    st.table(df_ms)
+
+    st.markdown("---")
     if st.button("📤 Esporta su mappa_per_chatbot.json"):
         try:
             record["micro_cicli_quadrimestri_calendario"] = df_quad.to_dict(orient="records")
+            record["micro_pinnacoli_sfide_trimestri_calendario"] = df_ms.to_dict(orient="records")
             with open(MAPPA_PATH, "w", encoding="utf-8") as f:
                 json.dump(record, f, indent=4, ensure_ascii=False)
-            st.success("Dati calendario salvati nel file.")
+            st.success("Dati calendario aggiornati nel file JSON.")
         except Exception as e:
             st.error(f"Errore salvataggio: {e}")
 
