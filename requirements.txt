@@ -3,4 +3,4 @@ pypdf
 python-dotenv
 google-generativeai
 sentence-transformers
-chromadb
+chromadb>=1.0.12
