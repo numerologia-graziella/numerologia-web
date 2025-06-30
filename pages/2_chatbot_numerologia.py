@@ -119,11 +119,10 @@ def main():
 
             full_gemini_prompt += "\n\n📂 Dati Utente:\n"
             for k, v in mappa.items():
-                if isinstance(v, str | int | float):
+                if isinstance(v, (str, int, float)):
                     full_gemini_prompt += f"- {k}: {v}\n"
             full_gemini_prompt += calendario_info
             full_gemini_prompt += f"\n\nDomanda dell'Utente: {prompt}"
-
         else:
             full_gemini_prompt += f"\n\n⚠️ Nessun dato utente disponibile. La risposta sarà generica.\n\nDomanda dell'Utente: {prompt}"
 
@@ -147,6 +146,16 @@ def main():
     if st.button("🔄 Resetta la conversazione"):
         st.session_state.clear()
         st.rerun()
+
+    # --- 🔍 Mostra contenuto mappa per chatbot ---
+    st.subheader("📂 Contenuto attuale della mappa_per_chatbot.json")
+    if st.button("Mostra dati caricati per la chatbot"):
+        mappa = st.session_state.get("mappa_numerologica_utente")
+        if mappa:
+            st.success("✅ Mappa caricata correttamente.")
+            st.json(mappa)
+        else:
+            st.error("⚠️ Nessun dato trovato. Vai alla sezione **Mappa Numerologica** e genera la mappa.")
 
 if __name__ == '__main__':
     main()
