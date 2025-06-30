@@ -6,3 +6,4 @@ sentence-transformers
 chromadb>=1.0.12
 pysqlite3-binary
 XlsxWriter
+fpdf
