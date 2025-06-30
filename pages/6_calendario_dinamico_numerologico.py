@@ -11,7 +11,8 @@ st.set_page_config(page_title="Calendario Dinamico Numerologico", page_icon="ðŸ“
 st.title("Calendario Dinamico Numerologico")
 
 # --- Path JSON ---
-MAPPA_PATH = "mappa_per_chatbot.json"
+from pathlib import Path
+MAPPA_PATH = Path("mappa_per_chatbot.json")
 
 
 def riduci_numero(n):
