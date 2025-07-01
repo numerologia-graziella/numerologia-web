@@ -5,32 +5,25 @@ import os
 import tempfile
 from datetime import datetime
 
-# --- Funzione per trovare il font ---
+from pathlib import Path
+
+# --- Funzione per trovare il font (versione semplificata per locale + cloud) ---
 def get_font_file(font_name: str) -> str:
     """
-    Cerca il file del font specificato in vari percorsi comuni 
-    all'interno della struttura del progetto Streamlit.
+    Cerca il file del font nella directory 'fonts/' alla radice del progetto.
+    Funziona sia in locale sia su Streamlit Cloud.
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Assumiamo che la radice del progetto sia una directory sopra lo script corrente,
-    # utile per progetti Streamlit multi-pagina (es. numerologia/pages/report_pdf.py)
-    project_root = os.path.abspath(os.path.join(script_dir, ".."))
-    
-    # Percorsi di ricerca prioritari per i font
-    search_paths = [
-        os.path.join(project_root, "pages", "fonts", font_name), # Es: numerologia/pages/fonts/DejaVuSans.ttf
-        os.path.join(project_root, "fonts", font_name),          # Es: numerologia/fonts/DejaVuSans.ttf
-        os.path.join(script_dir, "fonts", font_name),            # Es: numerologia/pages/fonts/DejaVuSans.ttf se lo script è in pages/
-        os.path.join(script_dir, font_name)                      # Es: numerologia/pages/DejaVuSans.ttf
-    ]
+    base_dir = Path(__file__).resolve().parent.parent  # Torna alla root del progetto
+    font_path = base_dir / "fonts" / font_name
 
-    for path in search_paths:
-        if os.path.exists(path):
-            return path
-    
-    raise RuntimeError(f"Font '{font_name}' non trovato. Controllati i percorsi: {search_paths}. "
-                       "Assicurati che i file DejaVuSans.ttf e DejaVuSans-Bold.ttf "
-                       "siano presenti in una delle directory indicate (idealmente 'numerologia/pages/fonts/').")
+    if font_path.exists():
+        return str(font_path)
+    else:
+        raise RuntimeError(
+            f"Font '{font_name}' non trovato. "
+            f"Controlla che sia presente in: {font_path}"
+        )
+
 
 # --- Funzione di utilità per formattare i valori numerici ---
 def format_numeric_value(val):
