@@ -6,24 +6,31 @@ import tempfile
 from datetime import datetime
 
 from pathlib import Path
-# test di modifica 
-# --- Funzione per trovare il font (versione semplificata per locale + cloud) ---
+
+from pathlib import Path
+
+# --- Funzione aggiornata per trovare il font in entrambe le posizioni ---
 def get_font_file(font_name: str) -> str:
     """
-    Cerca il file del font nella directory 'fonts/' alla radice del progetto.
-    Funziona sia in locale sia su Streamlit Cloud.
+    Cerca il file del font sia in 'fonts/' sia in 'pages/fonts/'.
+    Così funziona anche se qualcosa punta ancora al vecchio percorso.
     """
-    base_dir = Path(__file__).resolve().parent.parent  # Torna alla root del progetto
-    font_path = base_dir / "fonts" / font_name
+    base_dir = Path(__file__).resolve().parent.parent
+    fallback_dir = base_dir / "pages"
 
-    if font_path.exists():
-        return str(font_path)
-    else:
-        raise RuntimeError(
-            f"Font '{font_name}' non trovato. "
-            f"Controlla che sia presente in: {font_path}"
-        )
+    font_paths = [
+        base_dir / "fonts" / font_name,
+        fallback_dir / "fonts" / font_name
+    ]
 
+    for path in font_paths:
+        if path.exists():
+            return str(path)
+
+    raise RuntimeError(
+        f"Font '{font_name}' non trovato. "
+        f"Controllati questi percorsi:\n" + "\n".join(str(p) for p in font_paths)
+    )
 
 # --- Funzione di utilità per formattare i valori numerici ---
 def format_numeric_value(val):
